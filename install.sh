@@ -191,7 +191,7 @@ TARGET_DIR="$DESKTOP_PATH/BE - Datasets"
 
 mkdir -p "$TARGET_DIR"
 
-wget -O "$DESKTOP_PATH/Datasets.zip" "$DATASET_URL"
+wget -q -O "$DESKTOP_PATH/Datasets.zip" "$DATASET_URL"
 unzip -oq "$DESKTOP_PATH/Datasets.zip" -d "$TARGET_DIR"
 rm -f "$DESKTOP_PATH/Datasets.zip"
 
@@ -202,18 +202,18 @@ success "Datasets downloaded and extracted to: $TARGET_DIR"
 # -------------------------------------------------------------
 step "Installing Visual Studio Code [8/9]"
 
-# if ! command -v snap >/dev/null 2>&1; then
-# 	sudo_cmd apt install -y snapd
-# 	sudo_cmd systemctl enable snapd.socket || true
-# 	sudo_cmd systemctl start snapd.socket || true
-# fi
+if ! command -v snap >/dev/null 2>&1; then
+	sudo_cmd apt install -y snapd
+	sudo_cmd systemctl enable snapd.socket || true
+	sudo_cmd systemctl start snapd.socket || true
+fi
 
-# if snap list | grep -q "code"; then
-# 	success "Visual Studio Code already installed."
-# else
-# 	sudo_cmd snap install code --classic
-# 	success "Visual Studio Code installed."
-# fi
+if snap list | grep -q "code"; then
+	success "Visual Studio Code already installed."
+else
+	sudo_cmd snap install code --classic
+	success "Visual Studio Code installed."
+fi
 
 # -------------------------------------------------------------
 #  8. Run verification script
