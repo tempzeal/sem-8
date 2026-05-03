@@ -28,7 +28,7 @@ add_missing() {
 # -------------------------------------------------------------
 #  1. Verify uv, venv, and shell config
 # -------------------------------------------------------------
-step "Verifying uv, venv, and shell config [1/6]"
+step "Verifying uv, venv, and shell config [1/7]"
 
 if [ -f "$HOME/.local/bin/env" ]; then
 	# Load uv into the current shell if available
@@ -98,7 +98,7 @@ fi
 # -------------------------------------------------------------
 #  2. Verify VS Code
 # -------------------------------------------------------------
-step "Verifying Visual Studio Code [2/6]"
+step "Verifying Visual Studio Code [2/7]"
 
 if command -v code &>/dev/null; then
 	echo -e "${GREEN}  ✔ Visual Studio Code is installed.${NC}"
@@ -108,9 +108,9 @@ else
 fi
 
 # -------------------------------------------------------------
-#  3. Verify Python packages
+#  3. Verify OpenJDK 8
 # -------------------------------------------------------------
-step "Verifying OpenJDK 8 [3/6]"
+step "Verifying OpenJDK 8 [3/7]"
 
 java_ok=false
 javac_ok=false
@@ -146,7 +146,7 @@ fi
 # -------------------------------------------------------------
 #  4. Verify Python packages
 # -------------------------------------------------------------
-step "Verifying Python packages [4/6]"
+step "Verifying Python packages [4/7]"
 
 REQUIRED_PKGS=(
 	ipykernel notebook gymnasium matplotlib numpy pandas sklearn seaborn
@@ -158,7 +158,7 @@ PYTHON_BIN="$HOME/.venv/bin/python3"
 if [ -x "$PYTHON_BIN" ]; then
 	for pkg in "${REQUIRED_PKGS[@]}"; do
 		if "$PYTHON_BIN" -c "import $pkg" &>/dev/null; then
-			echo -e "${GREEN}  ✔ $pkg is installed.${NC}"
+			echo -e "${GREEN}  ✔ $pkg ${NC}"
 		else
 			echo -e "${RED}  ✘ $pkg is missing.${NC}"
 			PKG_MISSING+=("$pkg")
@@ -170,27 +170,60 @@ else
 fi
 
 if command -v dot &>/dev/null; then
-	echo -e "${GREEN}  ✔ Graphviz system binary (dot) is installed.${NC}"
+	echo -e "${GREEN}  ✔ Graphviz ${NC}"
 else
 	echo -e "${RED}  ✘ Graphviz system binary (dot) not found.${NC}"
 	add_missing "Graphviz system package"
 fi
 
 # -------------------------------------------------------------
-#  4. Verify Desktop Datasets Folder
+#  5. Verify TensorFlow datasets
 # -------------------------------------------------------------
-step "Verifying Desktop Datasets Folder [5/6]"
+step "Verifying TensorFlow datasets [5/7]"
+
+KERAS_DIR="$HOME/.keras/datasets"
+
+if [ -d "$KERAS_DIR" ]; then
+	if [ -f "$KERAS_DIR/mnist.npz" ]; then
+		echo -e "${GREEN}  ✔ MNIST ${NC}"
+	else
+		echo -e "${RED}  ✘ MNIST dataset missing (${KERAS_DIR}/mnist.npz).${NC}"
+		DATASET_MISSING+=("MNIST (keras)")
+	fi
+
+	if [ -f "$KERAS_DIR/imdb.npz" ]; then
+		echo -e "${GREEN}  ✔ IMDB ${NC}"
+	else
+		echo -e "${RED}  ✘ IMDB dataset missing (${KERAS_DIR}/imdb.npz).${NC}"
+		DATASET_MISSING+=("IMDB (keras)")
+	fi
+
+	if [ -d "$KERAS_DIR/cifar-10-batches-py" ] || [ -f "$KERAS_DIR/cifar-10-python.tar.gz" ]; then
+		echo -e "${GREEN}  ✔ CIFAR-10 ${NC}"
+	else
+		echo -e "${RED}  ✘ CIFAR-10 dataset missing (${KERAS_DIR}/cifar-10-batches-py).${NC}"
+		DATASET_MISSING+=("CIFAR-10 (keras)")
+	fi
+else
+	echo -e "${RED}  ✘ Keras datasets directory not found (${KERAS_DIR}).${NC}"
+	DATASET_MISSING+=("MNIST (keras)" "IMDB (keras)" "CIFAR-10 (keras)")
+fi
+
+# -------------------------------------------------------------
+#  6. Verify Desktop Datasets Folder
+# -------------------------------------------------------------
+step "Verifying Desktop Datasets Folder [6/7]"
 
 DESKTOP_PATH="$HOME/Desktop"
-if [ -d "$DESKTOP_PATH/Datasets" ]; then
+if [ -d "$DESKTOP_PATH/BE - Datasets" ]; then
 	echo -e "${GREEN}  ✔ Datasets folder found on Desktop.${NC}"
-	if [ "$(ls -A "$DESKTOP_PATH/Datasets")" ]; then
-		FILE_COUNT=$(find "$DESKTOP_PATH/Datasets" -type f | wc -l | tr -d ' ')
+	if [ "$(ls -A "$DESKTOP_PATH/BE - Datasets")" ]; then
+		FILE_COUNT=$(find "$DESKTOP_PATH/BE - Datasets" -type f | wc -l | tr -d ' ')
 		echo -e "${GREEN}  ✔ Datasets folder contains files (${FILE_COUNT} files).${NC}"
 		echo -e "${CYAN}  File names:${NC}"
-		find "$DESKTOP_PATH/Datasets" -type f -print \
-			| sed "s|^$DESKTOP_PATH/Datasets/||" \
-			| sed 's|^Datasets/||' \
+		find "$DESKTOP_PATH/BE - Datasets" -type f -print \
+			| sed "s|^$DESKTOP_PATH/BE - Datasets/||" \
+			| sed 's|^BE - Datasets/||' \
 			| sed 's|^|    - |'
 	else
 		echo -e "${RED}  ✘ Datasets folder is empty.${NC}"
@@ -198,13 +231,13 @@ if [ -d "$DESKTOP_PATH/Datasets" ]; then
 	fi
 else
 	echo -e "${RED}  ✘ Datasets folder not found on Desktop.${NC}"
-	add_missing "Datasets folder"
+	add_missing "Datasets folder (Desktop)"
 fi
 
 # -------------------------------------------------------------
-#  5. Summary
+#  7. Summary
 # -------------------------------------------------------------
-step "Summary [6/6]"
+step "Summary [7/7]"
 
 if [ ${#MISSING[@]} -eq 0 ] && [ ${#PKG_MISSING[@]} -eq 0 ] && [ ${#DATASET_MISSING[@]} -eq 0 ]; then
 	echo -e "${GREEN}All checks passed. You are good to go!${NC}"
