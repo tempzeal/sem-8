@@ -33,7 +33,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 clear
 echo -e "${YELLOW}Starting installation...${NC}"
 
-step "Sudo authentication [1/8]"
+step "Sudo authentication [1/9]"
 SUDO_PW="123"
 
 if echo "$SUDO_PW" | sudo -S -v; then
@@ -59,20 +59,20 @@ sudo_cmd() {
 # -------------------------------------------------------------
 #  2. Update System
 # -------------------------------------------------------------
-step "Updating system [2/8]"
+step "Updating system [2/9]"
 sudo_cmd apt update -y
 sudo_cmd apt upgrade -y
 
 # -------------------------------------------------------------
 #  3. Install system dependencies
 # -------------------------------------------------------------
-step "Installing dependencies [3/8]"
+step "Installing dependencies [3/9]"
 sudo_cmd apt install -y wget curl snapd gnupg lsb-release ca-certificates unzip graphviz openjdk-8-jdk
 
 # -------------------------------------------------------------
 #  4. Install uv and set up virtual environment
 # -------------------------------------------------------------
-step "Setting up Python environment [4/8]"
+step "Setting up Python environment [4/9]"
 
 if [ -f "$HOME/.local/bin/env" ]; then
 	# Load uv into the current shell if available
@@ -134,7 +134,7 @@ success "Shell configuration updated for uv, venv auto-activation, and pip alias
 # -------------------------------------------------------------
 #  5. Install Python packages
 # -------------------------------------------------------------
-step "Installing Python packages [5/8]"
+step "Installing Python packages [5/9]"
 
 # shellcheck source=/dev/null
 source "$HOME/.venv/bin/activate"
@@ -148,13 +148,46 @@ uv pip install torch torchvision torchaudio --index-url https://download.pytorch
 success "Python packages installed."
 
 # -------------------------------------------------------------
+#  6. Download TensorFlow sample datasets
+# -------------------------------------------------------------
+step "Downloading TensorFlow sample datasets [6/9]"
+
+"$HOME/.venv/bin/python3" - <<'EOF'
+import sys
+import time
+from tensorflow.keras.datasets import mnist, imdb, cifar10
+
+def try_load(name, loader, retries=3, delay=5):
+	for attempt in range(1, retries + 1):
+		try:
+			loader()
+			print(f"[OK] {name} dataset downloaded.")
+			return True
+		except Exception as exc:
+			print(f"[WARN] {name} download failed (attempt {attempt}/{retries}): {exc}", file=sys.stderr)
+			if attempt < retries:
+				time.sleep(delay * attempt)
+	return False
+
+ok = True
+ok &= try_load("MNIST", mnist.load_data)
+ok &= try_load("IMDB", imdb.load_data)
+ok &= try_load("CIFAR-10", cifar10.load_data)
+
+if not ok:
+	print("[WARN] Some TensorFlow datasets failed to download.", file=sys.stderr)
+EOF
+
+success "TensorFlow sample datasets downloaded."
+
+# -------------------------------------------------------------
 #  6. Download and extract datasets
 # -------------------------------------------------------------
-step "Downloading and extracting datasets [6/8]"
+step "Downloading and extracting datasets [7/9]"
 
-DATASET_URL="https://github.com/tempzeal/lp/releases/download/lab/Datasets.zip"
+DATASET_URL="https://github.com/tempzeal/sem-8/releases/download/lab/BE.-.Datasets.zip"
 DESKTOP_PATH="$HOME/Desktop"
-TARGET_DIR="$DESKTOP_PATH/Datasets"
+TARGET_DIR="$DESKTOP_PATH/BE - Datasets"
 
 mkdir -p "$TARGET_DIR"
 
@@ -167,7 +200,7 @@ success "Datasets downloaded and extracted to: $TARGET_DIR"
 # -------------------------------------------------------------
 #  7. Install VS Code
 # -------------------------------------------------------------
-step "Installing Visual Studio Code [7/8]"
+step "Installing Visual Studio Code [8/9]"
 
 # if ! command -v snap >/dev/null 2>&1; then
 # 	sudo_cmd apt install -y snapd
@@ -185,9 +218,12 @@ step "Installing Visual Studio Code [7/8]"
 # -------------------------------------------------------------
 #  8. Run verification script
 # -------------------------------------------------------------
-step "Running verification script [8/8]"
+step "Downloading and launching verification script [9/9]"
 
-chmod +x "$SCRIPT_DIR/test.sh"
+TEST_SCRIPT_PATH="$SCRIPT_DIR/test.sh"
+
+wget -q -O "$TEST_SCRIPT_PATH" "https://github.com/tempzeal/sem-8/releases/download/lab/test.sh"
+chmod +x "$TEST_SCRIPT_PATH"
 
 if command -v gnome-terminal >/dev/null 2>&1; then
 	gnome-terminal -- bash -c "bash '$SCRIPT_DIR/test.sh'; exec bash"
