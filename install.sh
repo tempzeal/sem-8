@@ -33,7 +33,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 clear
 echo -e "${YELLOW}Starting installation...${NC}"
 
-step "Sudo authentication [1/9]"
+step "Sudo authentication [1/10]"
 SUDO_PW="123"
 
 if echo "$SUDO_PW" | sudo -S -v; then
@@ -59,20 +59,20 @@ sudo_cmd() {
 # -------------------------------------------------------------
 #  2. Update System
 # -------------------------------------------------------------
-step "Updating system [2/9]"
+step "Updating system [2/10]"
 sudo_cmd apt update -y
-sudo_cmd apt upgrade -y
+# sudo_cmd apt upgrade -y
 
 # -------------------------------------------------------------
 #  3. Install system dependencies
 # -------------------------------------------------------------
-step "Installing dependencies [3/9]"
+step "Installing dependencies [3/10]"
 sudo_cmd apt install -y wget curl snapd gnupg lsb-release ca-certificates unzip graphviz openjdk-8-jdk
 
 # -------------------------------------------------------------
 #  4. Install uv and set up virtual environment
 # -------------------------------------------------------------
-step "Setting up Python environment [4/9]"
+step "Setting up Python environment [4/10]"
 
 if [ -f "$HOME/.local/bin/env" ]; then
 	# Load uv into the current shell if available
@@ -134,7 +134,7 @@ success "Shell configuration updated for uv, venv auto-activation, and pip alias
 # -------------------------------------------------------------
 #  5. Install Python packages
 # -------------------------------------------------------------
-step "Installing Python packages [5/9]"
+step "Installing Python packages [5/10]"
 
 # shellcheck source=/dev/null
 source "$HOME/.venv/bin/activate"
@@ -145,12 +145,44 @@ uv pip install \
 
 uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
+# Extra Required Python Packages for TE
+uv pip install nltk scipy statsmodels spacy
+
 success "Python packages installed."
 
 # -------------------------------------------------------------
-#  6. Download TensorFlow sample datasets
+#  6. Download NLTK data and spaCy model
 # -------------------------------------------------------------
-step "Downloading TensorFlow sample datasets [6/9]"
+step "Downloading NLTK data and spaCy model [6/10]"
+
+"$HOME/.venv/bin/python3" - <<'EOF'
+import sys
+
+try:
+    import nltk
+    for d in ['punkt', 'punkt_tab', 'stopwords', 'wordnet', 'averaged_perceptron_tagger', 'averaged_perceptron_tagger_eng']:
+        print(f"Downloading NLTK data: {d}")
+        nltk.download(d, quiet=True)
+    print("[OK] NLTK data downloaded.")
+except Exception as e:
+    print(f"[WARN] NLTK download failed: {e}", file=sys.stderr)
+
+try:
+    import spacy
+    from spacy.cli import download
+    print("Downloading spaCy model: en_core_web_sm")
+    download("en_core_web_sm")
+    print("[OK] spaCy model downloaded.")
+except Exception as e:
+    print(f"[WARN] spaCy model download failed: {e}", file=sys.stderr)
+EOF
+
+success "NLTK data and spaCy model downloaded."
+
+# -------------------------------------------------------------
+#  7. Download TensorFlow sample datasets
+# -------------------------------------------------------------
+step "Downloading TensorFlow sample datasets [7/10]"
 
 "$HOME/.venv/bin/python3" - <<'EOF'
 import sys
@@ -181,26 +213,38 @@ EOF
 success "TensorFlow sample datasets downloaded."
 
 # -------------------------------------------------------------
-#  6. Download and extract datasets
+#  8. Download and extract datasets
 # -------------------------------------------------------------
-step "Downloading and extracting datasets [7/9]"
+step "Downloading and extracting datasets [8/10]"
 
-DATASET_URL="https://github.com/tempzeal/sem-8/releases/download/lab/BE.-.Datasets.zip"
 DESKTOP_PATH="$HOME/Desktop"
-TARGET_DIR="$DESKTOP_PATH/BE - Datasets"
 
-mkdir -p "$TARGET_DIR"
+# Download BE Datasets
+BE_DATASET_URL="https://github.com/tempzeal/sem-8/releases/download/lab/BE.-.Datasets.zip"
+BE_TARGET_DIR="$DESKTOP_PATH/BE - Datasets"
 
-wget -q -O "$DESKTOP_PATH/Datasets.zip" "$DATASET_URL"
-unzip -oq "$DESKTOP_PATH/Datasets.zip" -d "$TARGET_DIR"
-rm -f "$DESKTOP_PATH/Datasets.zip"
+mkdir -p "$BE_TARGET_DIR"
+wget -q -O "$DESKTOP_PATH/BE-Datasets.zip" "$BE_DATASET_URL"
+unzip -oq "$DESKTOP_PATH/BE-Datasets.zip" -d "$BE_TARGET_DIR"
+rm -f "$DESKTOP_PATH/BE-Datasets.zip"
 
-success "Datasets downloaded and extracted to: $TARGET_DIR"
+success "BE Datasets downloaded and extracted to: $BE_TARGET_DIR"
+
+# Download TE Datasets
+TE_DATASET_URL="https://github.com/tempzeal/sem-8/releases/download/lab/TE.-.Datasets.zip"
+TE_TARGET_DIR="$DESKTOP_PATH/TE - Datasets"
+
+mkdir -p "$TE_TARGET_DIR"
+wget -q -O "$DESKTOP_PATH/TE-Datasets.zip" "$TE_DATASET_URL"
+unzip -oq "$DESKTOP_PATH/TE-Datasets.zip" -d "$TE_TARGET_DIR"
+rm -f "$DESKTOP_PATH/TE-Datasets.zip"
+
+success "TE Datasets downloaded and extracted to: $TE_TARGET_DIR"
 
 # -------------------------------------------------------------
-#  7. Install VS Code
+#  9. Install VS Code
 # -------------------------------------------------------------
-step "Installing Visual Studio Code [8/9]"
+step "Installing Visual Studio Code [9/10]"
 
 if ! command -v snap >/dev/null 2>&1; then
 	sudo_cmd apt install -y snapd
@@ -216,9 +260,9 @@ else
 fi
 
 # -------------------------------------------------------------
-#  8. Run verification script
+#  10. Run verification script
 # -------------------------------------------------------------
-step "Downloading and launching verification script [9/9]"
+step "Downloading and launching verification script [10/10]"
 
 TEST_SCRIPT_PATH="$SCRIPT_DIR/test.sh"
 

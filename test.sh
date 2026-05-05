@@ -28,7 +28,7 @@ add_missing() {
 # -------------------------------------------------------------
 #  1. Verify uv, venv, and shell config
 # -------------------------------------------------------------
-step "Verifying uv, venv, and shell config [1/7]"
+step "Verifying uv, venv, and shell config [1/8]"
 
 if [ -f "$HOME/.local/bin/env" ]; then
 	# Load uv into the current shell if available
@@ -98,7 +98,7 @@ fi
 # -------------------------------------------------------------
 #  2. Verify VS Code
 # -------------------------------------------------------------
-step "Verifying Visual Studio Code [2/7]"
+step "Verifying Visual Studio Code [2/8]"
 
 if command -v code &>/dev/null; then
 	echo -e "${GREEN}  ✔ Visual Studio Code is installed.${NC}"
@@ -110,7 +110,7 @@ fi
 # -------------------------------------------------------------
 #  3. Verify OpenJDK 8
 # -------------------------------------------------------------
-step "Verifying OpenJDK 8 [3/7]"
+step "Verifying OpenJDK 8 [3/8]"
 
 java_ok=false
 javac_ok=false
@@ -146,11 +146,12 @@ fi
 # -------------------------------------------------------------
 #  4. Verify Python packages
 # -------------------------------------------------------------
-step "Verifying Python packages [4/7]"
+step "Verifying Python packages [4/8]"
 
 REQUIRED_PKGS=(
 	ipykernel notebook gymnasium matplotlib numpy pandas sklearn seaborn
 	tensorflow pydot graphviz deap torch torchvision torchaudio
+	nltk scipy statsmodels spacy
 )
 
 PYTHON_BIN="$HOME/.venv/bin/python3"
@@ -177,9 +178,109 @@ else
 fi
 
 # -------------------------------------------------------------
-#  5. Verify TensorFlow datasets
+#  5. Verify NLTK & spaCy datasets
 # -------------------------------------------------------------
-step "Verifying TensorFlow datasets [5/7]"
+step "Verifying NLTK & spaCy datasets [5/8]"
+
+# NLTK Verification
+NLTK_DATA_DIR="$HOME/nltk_data"
+
+if [ -d "$NLTK_DATA_DIR" ]; then
+	# Check tokenizers
+	for dataset in punkt punkt_tab; do
+		FOUND=false
+		if [ -d "$NLTK_DATA_DIR/tokenizers/$dataset" ]; then
+			echo -e "${GREEN}  ✔ $dataset ${NC}"
+			FOUND=true
+		else
+			for ZIP in "$NLTK_DATA_DIR/tokenizers/$dataset.zip" "$NLTK_DATA_DIR"/*.zip; do
+				if [ -f "$ZIP" ] && [[ "$ZIP" == *"$dataset.zip" ]]; then
+					echo -e "${YELLOW}  ⚙ Extracting $dataset.zip...${NC}"
+					unzip -oq "$ZIP" -d "$(dirname "$ZIP")" && {
+						echo -e "${GREEN}  ✔ Extracted $dataset ${NC}"
+						FOUND=true
+						break
+					}
+				fi
+			done
+		fi
+		if [ "$FOUND" = false ]; then
+			echo -e "${RED}  ✘ $dataset dataset missing.${NC}"
+			DATASET_MISSING+=("NLTK: $dataset")
+		fi
+	done
+
+	# Check corpora
+	for dataset in stopwords wordnet; do
+		FOUND=false
+		if [ -d "$NLTK_DATA_DIR/corpora/$dataset" ]; then
+			echo -e "${GREEN}  ✔ $dataset ${NC}"
+			FOUND=true
+		else
+			for ZIP in "$NLTK_DATA_DIR/corpora/$dataset.zip" "$NLTK_DATA_DIR"/*.zip; do
+				if [ -f "$ZIP" ] && [[ "$ZIP" == *"$dataset.zip" ]]; then
+					echo -e "${YELLOW}  ⚙ Extracting $dataset.zip...${NC}"
+					unzip -oq "$ZIP" -d "$(dirname "$ZIP")" && {
+						echo -e "${GREEN}  ✔ Extracted $dataset ${NC}"
+						FOUND=true
+						break
+					}
+				fi
+			done
+		fi
+		if [ "$FOUND" = false ]; then
+			echo -e "${RED}  ✘ $dataset dataset missing.${NC}"
+			DATASET_MISSING+=("NLTK: $dataset")
+		fi
+	done
+
+	# Check taggers
+	for dataset in averaged_perceptron_tagger averaged_perceptron_tagger_eng; do
+		FOUND=false
+		if [ -d "$NLTK_DATA_DIR/taggers/$dataset" ]; then
+			echo -e "${GREEN}  ✔ $dataset ${NC}"
+			FOUND=true
+		else
+			for ZIP in "$NLTK_DATA_DIR/taggers/$dataset.zip" "$NLTK_DATA_DIR"/*.zip; do
+				if [ -f "$ZIP" ] && [[ "$ZIP" == *"$dataset.zip" ]]; then
+					echo -e "${YELLOW}  ⚙ Extracting $dataset.zip...${NC}"
+					unzip -oq "$ZIP" -d "$(dirname "$ZIP")" && {
+						echo -e "${GREEN}  ✔ Extracted $dataset ${NC}"
+						FOUND=true
+						break
+					}
+				fi
+			done
+		fi
+		if [ "$FOUND" = false ]; then
+			echo -e "${RED}  ✘ $dataset dataset missing.${NC}"
+			DATASET_MISSING+=("NLTK: $dataset")
+		fi
+	done
+else
+	echo -e "${RED}  ✘ NLTK data directory not found.${NC}"
+	DATASET_MISSING+=("NLTK: punkt" "NLTK: punkt_tab" "NLTK: stopwords" "NLTK: wordnet" "NLTK: averaged_perceptron_tagger" "NLTK: averaged_perceptron_tagger_eng")
+fi
+
+# spaCy Verification
+SPACY_MODEL="en_core_web_sm"
+
+if [ -x "$PYTHON_BIN" ]; then
+	if "$PYTHON_BIN" -c "import spacy; spacy.load('$SPACY_MODEL')" &>/dev/null; then
+		echo -e "${GREEN}  ✔ $SPACY_MODEL ${NC}"
+	else
+		echo -e "${RED}  ✘ $SPACY_MODEL model missing.${NC}"
+		DATASET_MISSING+=("spaCy: $SPACY_MODEL")
+	fi
+else
+	echo -e "${RED}  ✘ Cannot verify spaCy (venv Python not found).${NC}"
+	DATASET_MISSING+=("spaCy: $SPACY_MODEL")
+fi
+
+# -------------------------------------------------------------
+#  6. Verify TensorFlow datasets
+# -------------------------------------------------------------
+step "Verifying TensorFlow datasets [6/8]"
 
 KERAS_DIR="$HOME/.keras/datasets"
 
@@ -210,34 +311,58 @@ else
 fi
 
 # -------------------------------------------------------------
-#  6. Verify Desktop Datasets Folder
+#  7. Verify Desktop Datasets Folders
 # -------------------------------------------------------------
-step "Verifying Desktop Datasets Folder [6/7]"
+step "Verifying Desktop Datasets Folders [7/8]"
 
 DESKTOP_PATH="$HOME/Desktop"
+
+# Verify BE Datasets
 if [ -d "$DESKTOP_PATH/BE - Datasets" ]; then
-	echo -e "${GREEN}  ✔ Datasets folder found on Desktop.${NC}"
+	echo -e "${GREEN}  ✔ BE Datasets folder found.${NC}"
 	if [ "$(ls -A "$DESKTOP_PATH/BE - Datasets")" ]; then
 		FILE_COUNT=$(find "$DESKTOP_PATH/BE - Datasets" -type f | wc -l | tr -d ' ')
-		echo -e "${GREEN}  ✔ Datasets folder contains files (${FILE_COUNT} files).${NC}"
-		echo -e "${CYAN}  File names:${NC}"
+		echo -e "${GREEN}    ✔ Contains ${FILE_COUNT} files.${NC}"
+		echo -e "${CYAN}    File names:${NC}"
 		find "$DESKTOP_PATH/BE - Datasets" -type f -print \
 			| sed "s|^$DESKTOP_PATH/BE - Datasets/||" \
 			| sed 's|^BE - Datasets/||' \
-			| sed 's|^|    - |'
+			| sed 's|^|      - |'
 	else
-		echo -e "${RED}  ✘ Datasets folder is empty.${NC}"
-		add_missing "Datasets (empty folder)"
+		echo -e "${RED}    ✘ BE Datasets folder is empty.${NC}"
+		add_missing "BE Datasets (empty folder)"
 	fi
 else
-	echo -e "${RED}  ✘ Datasets folder not found on Desktop.${NC}"
-	add_missing "Datasets folder (Desktop)"
+	echo -e "${RED}  ✘ BE Datasets folder not found.${NC}"
+	add_missing "BE Datasets folder"
+fi
+
+echo " "
+
+# Verify TE Datasets
+if [ -d "$DESKTOP_PATH/TE - Datasets" ]; then
+	echo -e "${GREEN}  ✔ TE Datasets folder found.${NC}"
+	if [ "$(ls -A "$DESKTOP_PATH/TE - Datasets")" ]; then
+		FILE_COUNT=$(find "$DESKTOP_PATH/TE - Datasets" -type f | wc -l | tr -d ' ')
+		echo -e "${GREEN}    ✔ Contains ${FILE_COUNT} files.${NC}"
+		echo -e "${CYAN}    File names:${NC}"
+		find "$DESKTOP_PATH/TE - Datasets" -type f -print \
+			| sed "s|^$DESKTOP_PATH/TE - Datasets/||" \
+			| sed 's|^TE - Datasets/||' \
+			| sed 's|^|      - |'
+	else
+		echo -e "${RED}    ✘ TE Datasets folder is empty.${NC}"
+		add_missing "TE Datasets (empty folder)"
+	fi
+else
+	echo -e "${RED}  ✘ TE Datasets folder not found.${NC}"
+	add_missing "TE Datasets folder"
 fi
 
 # -------------------------------------------------------------
-#  7. Summary
+#  8. Summary
 # -------------------------------------------------------------
-step "Summary [7/7]"
+step "Summary [8/8]"
 
 if [ ${#MISSING[@]} -eq 0 ] && [ ${#PKG_MISSING[@]} -eq 0 ] && [ ${#DATASET_MISSING[@]} -eq 0 ]; then
 	echo -e "${GREEN}All checks passed. You are good to go!${NC}"
