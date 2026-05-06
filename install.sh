@@ -92,12 +92,13 @@ if [ -f "$HOME/.local/bin/env" ]; then
 	source "$HOME/.local/bin/env"
 fi
 
-if [ ! -d "$HOME/.venv" ]; then
+if [ -d "$HOME/.venv" ]; then
+    sudo_cmd rm -rf "$HOME/.venv"
+    success "Existing virtual environment removed."
+fi
+
 	uv venv "$HOME/.venv" --python=python3.12
 	success "Virtual environment created at ~/.venv."
-else
-	success "Virtual environment already exists."
-fi
 
 # Ensure shell rc files are updated for uv, venv auto-activation, and pip alias
 apply_shell_block() {
@@ -141,7 +142,7 @@ source "$HOME/.venv/bin/activate"
 
 uv pip install \
 	ipykernel notebook gymnasium matplotlib numpy pandas scikit-learn seaborn \
-	tensorflow pydot graphviz deap
+	tensorflow-cpu pydot graphviz deap
 
 uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
@@ -223,10 +224,10 @@ DESKTOP_PATH="$HOME/Desktop"
 BE_DATASET_URL="https://github.com/tempzeal/sem-8/releases/download/lab/BE.-.Datasets.zip"
 BE_TARGET_DIR="$DESKTOP_PATH/BE - Datasets"
 
-mkdir -p "$BE_TARGET_DIR"
-wget -q -O "$DESKTOP_PATH/BE-Datasets.zip" "$BE_DATASET_URL"
-unzip -oq "$DESKTOP_PATH/BE-Datasets.zip" -d "$BE_TARGET_DIR"
-rm -f "$DESKTOP_PATH/BE-Datasets.zip"
+sudo_cmd mkdir -p "$BE_TARGET_DIR"
+sudo_cmd wget -q -O "$DESKTOP_PATH/BE-Datasets.zip" "$BE_DATASET_URL"
+sudo_cmd unzip -oq "$DESKTOP_PATH/BE-Datasets.zip" -d "$BE_TARGET_DIR"
+sudo_cmd rm -f "$DESKTOP_PATH/BE-Datasets.zip"
 
 success "BE Datasets downloaded and extracted to: $BE_TARGET_DIR"
 
@@ -234,10 +235,10 @@ success "BE Datasets downloaded and extracted to: $BE_TARGET_DIR"
 TE_DATASET_URL="https://github.com/tempzeal/sem-8/releases/download/lab/TE.-.Datasets.zip"
 TE_TARGET_DIR="$DESKTOP_PATH/TE - Datasets"
 
-mkdir -p "$TE_TARGET_DIR"
-wget -q -O "$DESKTOP_PATH/TE-Datasets.zip" "$TE_DATASET_URL"
-unzip -oq "$DESKTOP_PATH/TE-Datasets.zip" -d "$TE_TARGET_DIR"
-rm -f "$DESKTOP_PATH/TE-Datasets.zip"
+sudo_cmd mkdir -p "$TE_TARGET_DIR"
+sudo_cmd wget -q -O "$DESKTOP_PATH/TE-Datasets.zip" "$TE_DATASET_URL"
+sudo_cmd unzip -oq "$DESKTOP_PATH/TE-Datasets.zip" -d "$TE_TARGET_DIR"
+sudo_cmd rm -f "$DESKTOP_PATH/TE-Datasets.zip"
 
 success "TE Datasets downloaded and extracted to: $TE_TARGET_DIR"
 
@@ -266,8 +267,8 @@ step "Downloading and launching verification script [10/10]"
 
 TEST_SCRIPT_PATH="$SCRIPT_DIR/test.sh"
 
-wget -q -O "$TEST_SCRIPT_PATH" "https://github.com/tempzeal/sem-8/releases/download/lab/test.sh"
-chmod +x "$TEST_SCRIPT_PATH"
+sudo_cmd wget -q -O "$TEST_SCRIPT_PATH" "https://github.com/tempzeal/labpkg/releases/download/dataset/test.sh"
+sudo_cmd chmod +x "$TEST_SCRIPT_PATH"
 
 if command -v gnome-terminal >/dev/null 2>&1; then
 	gnome-terminal -- bash -c "bash '$SCRIPT_DIR/test.sh'; exec bash"
